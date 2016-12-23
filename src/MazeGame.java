@@ -43,7 +43,7 @@ public class MazeGame extends JPanel
 			id = 0;
 			numPlayers++;
 			ServerSocket listener = new ServerSocket(9489);
-			boolean cont = true;
+			boolean cont = false;//TODO
 			int idCounter = 1;
 			while(cont)
 			{
@@ -112,8 +112,7 @@ public class MazeGame extends JPanel
 		frame.setVisible(true);
 	}
 
-	static final int MAZE_SIZE = 503, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 32, PLAYER_SIZE = 8; 
-	static enum Tile {WALL, SPACE};
+	static final int MAZE_SIZE = 503, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 32, PLAYER_SIZE = 8;
 	static Controls controls;
 	static ArrayList<Player> players;
 	static Tile[][] maze;
@@ -124,7 +123,7 @@ public class MazeGame extends JPanel
 		controls = new Controls();
 		
 		for(int i = 0; i < numPlayers; i++)
-			players.add(new Player(new Vector(MAZE_SIZE/2 * TILE_SIZE, MAZE_SIZE/2 * TILE_SIZE), new Vector(0, 0)));
+			players.add(new Player(new Vector(TILE_SIZE * 1.5, TILE_SIZE * 1.5), new Vector(0, 0)));
 		
 		maze = new Tile[MAZE_SIZE][MAZE_SIZE];
 		if(host)
@@ -234,9 +233,9 @@ public class MazeGame extends JPanel
 		
 		g.setColor(Color.orange);
 		for(Player p : players)
-			g.fillOval((int)(p.position.x - camera.x + S_WIDTH/2 - PLAYER_SIZE),
+			g.fillRoundRect((int)(p.position.x - camera.x + S_WIDTH/2 - PLAYER_SIZE),
 					(int)(p.position.y - camera.y + S_HEIGHT/2 - PLAYER_SIZE),
-					PLAYER_SIZE*2, PLAYER_SIZE*2);
+					PLAYER_SIZE*2, PLAYER_SIZE*2, 2, 2);
 	}
 	
 	public static void sendServerData(DataOutputStream out)

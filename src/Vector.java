@@ -22,6 +22,12 @@ public class Vector implements java.io.Serializable
 		y += pair.y;
 	}
 	
+	public void factor(double f)
+	{
+		x*=f;
+		y*=f;
+	}
+	
 	public void doDeltaTo(Vector target, Vector delta)
 	{
 		if(x < target.x)
