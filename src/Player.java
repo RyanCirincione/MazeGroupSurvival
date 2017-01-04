@@ -12,20 +12,23 @@ public class Player
 	
 	public void movement(Controls controls)
 	{
-		velocity.y = (controls.right ? SPEED : 0) + (controls.left ? -SPEED : 0);
+		velocity.x = (controls.right ? SPEED : 0) + (controls.left ? -SPEED : 0);
 		velocity.y = (controls.down ? SPEED : 0) + (controls.up ? -SPEED : 0);
-		
-		Vector pos = position.clone();
-		pos.doDelta(velocity);
-		
-		for(int i = 0; i < 5 && checkCollide(pos); i++)
+
+		for(int i = 0; i < 5 && checkCollide(new Vector(position.x + velocity.x, position.y)); i++)
 		{
-			velocity.factor(0.5);
-			pos = position.clone();
-			pos.doDelta(velocity);
+			velocity.x /= 2;
+			if(i == 4)
+				velocity.x = 0;
+		}
+		for(int i = 0; i < 5 && checkCollide(new Vector(position.x, position.y + velocity.y)); i++)
+		{
+			velocity.y /= 2;
+			if(i == 4)
+				velocity.y = 0;
 		}
 		
-		if(!checkCollide(pos))
+		if(!checkCollide(new Vector(position.x + velocity.x, position.y + velocity.y)))
 			position.doDelta(velocity);
 	}
 	

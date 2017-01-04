@@ -40,18 +40,16 @@ public class MazeGame extends JPanel
 		if(JOptionPane.showConfirmDialog(frame, "Will you be the host?") == JOptionPane.YES_OPTION)
 		{
 			host = true;
+			frame.setTitle("Maze Group Survival --HOST--");
 			id = 0;
 			numPlayers++;
 			ServerSocket listener = new ServerSocket(9489);
-			boolean cont = false;//TODO
 			int idCounter = 1;
-			while(cont)
+			while(JOptionPane.showConfirmDialog(frame, "Wait for another player?")
+					== JOptionPane.YES_OPTION)
 			{
-				JOptionPane.showMessageDialog(frame, "Click OK to begin waiting for players.");
 				socket = listener.accept();
 				listener.close();
-				cont = JOptionPane.showConfirmDialog(frame, "Player found! Wait for another?")
-						== JOptionPane.YES_OPTION;
 				numPlayers++;
 
 				out.add(new DataOutputStream(socket.getOutputStream()));
@@ -66,6 +64,8 @@ public class MazeGame extends JPanel
 		{
 			String serverAddress = JOptionPane.showInputDialog(frame, "Enter IP Address of the Host:",
 		            "Maze Group Survival", JOptionPane.QUESTION_MESSAGE);
+			if(serverAddress == null)
+				System.exit(0);
 			socket = new Socket(serverAddress, 9489);
 
 			out.add(new DataOutputStream(socket.getOutputStream()));
@@ -93,7 +93,6 @@ public class MazeGame extends JPanel
 					}
 			}
 		};
-		t.start();
 		
 		MazeGame panel = new MazeGame();
 		frame.getContentPane().add(panel);
@@ -110,9 +109,11 @@ public class MazeGame extends JPanel
 		frame.pack();
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
+		
+		t.start();
 	}
 
-	static final int MAZE_SIZE = 503, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 32, PLAYER_SIZE = 8;
+	static final int MAZE_SIZE = 503, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 48, PLAYER_SIZE = 8;
 	static Controls controls;
 	static ArrayList<Player> players;
 	static Tile[][] maze;
@@ -240,35 +241,36 @@ public class MazeGame extends JPanel
 	
 	public static void sendServerData(DataOutputStream out)
 	{
+		byte[] result = new byte[0];
 		for(int p = 0; p < players.size(); p++)
-		{
-			try {
-				out.write(intToByteArray((int)players.get(p).position.x));
-				out.write(intToByteArray((int)players.get(p).position.y));
-				out.write(intToByteArray((int)players.get(p).velocity.x));
-				out.write(intToByteArray((int)players.get(p).velocity.y));
-			} catch (IOException e) {
-				System.out.println("Server failed to send data to id " + p);
-			}
+			result = concatByteArray(result, intToByteArray((int)players.get(p).position.x),
+					intToByteArray((int)players.get(p).position.y),
+					intToByteArray((int)players.get(p).velocity.x),
+					intToByteArray((int)players.get(p).velocity.y));
+		
+		try {
+			out.write(result);
+		} catch (IOException e) {
+			System.out.println("Server failed to send data");
 		}
 	}
 	public static void sendClientData(DataOutputStream out)
 	{
 		try {
-			out.writeInt(id);
-			out.write(intToByteArray((int)players.get(id).position.x));
-			out.write(intToByteArray((int)players.get(id).position.y));
-			out.write(intToByteArray((int)players.get(id).velocity.x));
-			out.write(intToByteArray((int)players.get(id).velocity.y));
+			out.write(concatByteArray(intToByteArray(id), intToByteArray((int)players.get(id).position.x),
+					intToByteArray((int)players.get(id).position.y), intToByteArray((int)players.get(id).velocity.x),
+					intToByteArray((int)players.get(id).velocity.y)));
 		} catch (IOException e) {
 			System.out.println("Client failed to send data; id " + id);
 		}
 	}
-	public static void receiveServerData(DataInputStream in)
+	public static void receiveClientData(DataInputStream in)
 	{
 		try {
-			int i = in.readInt();
 			byte[] data = new byte[4];
+			in.read(data, 0, 4);
+			int i = byteArrayToInt(data);
+			
 			in.read(data, 0, 4);
 			players.get(i).position.x = byteArrayToInt(data);
 			in.read(data, 0, 4);
@@ -281,7 +283,7 @@ public class MazeGame extends JPanel
 			System.out.println("Server failed to receive data");
 		}
 	}
-	public static void receiveClientData(DataInputStream in)
+	public static void receiveServerData(DataInputStream in)
 	{
 		for(int p = 0; p < players.size(); p++)
 		{
@@ -326,7 +328,20 @@ public class MazeGame extends JPanel
 	        (byte) (a & 0xFF)
 	    };
 	}
-	public void generateMaze(Tile[][] maze)
+	public static byte[] concatByteArray(byte[]... bytes)
+	{
+		int l = 0, x = 0;
+		for(byte[] b : bytes)
+			l += b.length;
+		
+		byte[] result = new byte[l];
+		for(byte[] b : bytes)
+			for(byte by : b)
+				result[x++] = by;
+		
+		return result;
+	}
+	public static void generateMaze(Tile[][] maze)
 	{
 		ArrayList<Vector[]> walls = new ArrayList<Vector[]>();
 		
@@ -375,6 +390,19 @@ public class MazeGame extends JPanel
 				walls.add(new Vector[]{new Vector(current[2].x, current[2].y),
 						new Vector(current[2].x, current[2].y-1),
 						new Vector(current[2].x, current[2].y-2)});
+		}
+		
+		int x = 0, y = 0;
+		for(int i = 0; i < MAZE_SIZE; i++)
+		{
+			while(((x + y) % 2 == 0 || (maze[x][y] == Tile.SPACE && Math.random() < 0.4)) ||
+					x == 0 || y == 0 || x == MAZE_SIZE-1 || y == MAZE_SIZE-1)
+			{
+				x = (int)(Math.random()*MAZE_SIZE);
+				y = (int)(Math.random()*MAZE_SIZE);
+			}
+			
+			maze[x][y] = Tile.SPACE;
 		}
 	}
 }
