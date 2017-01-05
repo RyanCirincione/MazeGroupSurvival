@@ -1,13 +1,16 @@
+import java.awt.Color;
 
 public class Player
 {
 	final int SPEED = 4;
 	public Vector position, velocity;
+	public Color color;
 	
-	public Player(Vector pos, Vector vel)
+	public Player(Vector pos, Vector vel, Color c)
 	{
 		position = pos.clone();
 		velocity = vel.clone();
+		color = c;
 	}
 	
 	public void movement(Controls controls)

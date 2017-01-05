@@ -25,6 +25,7 @@ public class MazeGame extends JPanel
 	private static ArrayList<DataInputStream> in;
 	private static int id, numPlayers;
 	private static boolean host;
+	private static int[] color;
 	
 	public static void main(String[] args) throws IOException
 	{
@@ -75,6 +76,17 @@ public class MazeGame extends JPanel
 			numPlayers = in.get(0).readInt();
 		}
 		
+		String c = JOptionPane.showInputDialog(frame, "Enter RGB of your desired player color. (Ex: \"84 0 255\")",
+	            "Maze Group Survival", JOptionPane.QUESTION_MESSAGE);
+		color = new int[]{Integer.parseInt(c.split(" ")[0]), Integer.parseInt(c.split(" ")[1]),
+				Integer.parseInt(c.split(" ")[2])};
+		if(color[0] > 250 && color[1] > 250 && color[2] > 250)
+		{
+			color[0] = 128;
+			color[1] = 64;
+			color[2] = 12;
+		}
+		
 		Thread t = new Thread(){
 			public void run()
 			{
@@ -123,9 +135,55 @@ public class MazeGame extends JPanel
 		players = new ArrayList<Player>();
 		controls = new Controls();
 		
-		for(int i = 0; i < numPlayers; i++)
-			players.add(new Player(new Vector(TILE_SIZE * 1.5, TILE_SIZE * 1.5), new Vector(0, 0)));
+		if(host)
+		{
+			players.add(new Player(new Vector(TILE_SIZE * 1.5, TILE_SIZE * 1.5), new Vector(0, 0),
+					new Color(color[0], color[1], color[2])));
+			
+			for(int p = 0; p < in.size(); p++)
+			{
+				try {
+					players.add(new Player(new Vector(TILE_SIZE * 1.5, TILE_SIZE * 1.5), new Vector(0, 0),
+							new Color(in.get(p).readInt(), in.get(p).readInt(), in.get(p).readInt())));
+				} catch (IOException e) {
+					System.out.println("Server failed to receive data from id " + (p+1));
+				}
+			}
+			
+			for(DataOutputStream o : out)
+			{
+				try {
+					for(Player p : players)
+					{
+						o.writeInt(p.color.getRed());
+						o.writeInt(p.color.getGreen());
+						o.writeInt(p.color.getBlue());
+					}
+				} catch (IOException e) {
+					System.out.println("Server failed to send data");
+				}
+			}
+		}
+		else
+		{
+			try {
+				out.get(0).writeInt(color[0]);
+				out.get(0).writeInt(color[1]);
+				out.get(0).writeInt(color[2]);
+			} catch (IOException e) {
+				System.out.println("Client failed to receive data; id " + id);
+			}
+			
+			for(int i = 0; i < numPlayers; i++)
+				try {
+					players.add(new Player(new Vector(TILE_SIZE * 1.5, TILE_SIZE * 1.5), new Vector(0, 0),
+							new Color(in.get(0).readInt(), in.get(0).readInt(), in.get(0).readInt())));
+				} catch (IOException e) {
+					System.out.println("Client failed to receive data; id " + id);
+				}
+		}
 		
+		//Create the maze and network it
 		maze = new Tile[MAZE_SIZE][MAZE_SIZE];
 		if(host)
 		{
@@ -232,11 +290,13 @@ public class MazeGame extends JPanel
 								TILE_SIZE, TILE_SIZE);
 					}
 		
-		g.setColor(Color.orange);
 		for(Player p : players)
+		{
+			g.setColor(p.color);
 			g.fillRoundRect((int)(p.position.x - camera.x + S_WIDTH/2 - PLAYER_SIZE),
 					(int)(p.position.y - camera.y + S_HEIGHT/2 - PLAYER_SIZE),
 					PLAYER_SIZE*2, PLAYER_SIZE*2, 2, 2);
+		}
 	}
 	
 	public static void sendServerData(DataOutputStream out)
