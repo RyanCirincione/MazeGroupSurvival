@@ -23,7 +23,7 @@ public class MazeGame extends JPanel
 	private static Socket socket;
 	private static ArrayList<DataOutputStream> out;
 	private static ArrayList<DataInputStream> in;
-	private static int id, numPlayers;
+	private static int numPlayers;
 	private static boolean host;
 	private static int[] color;
 	
@@ -94,14 +94,14 @@ public class MazeGame extends JPanel
 					if(host)
 					{
 						for(DataOutputStream o : out)
-							sendServerData(o);
+							Network.sendServerData(o);
 						for(DataInputStream i : in)
-							receiveClientData(i);
+							Network.receiveClientData(i);
 					}
 					else
 					{
-						sendClientData(out.get(0));
-						receiveServerData(in.get(0));
+						Network.sendClientData(out.get(0));
+						Network.receiveServerData(in.get(0));
 					}
 			}
 		};
@@ -129,6 +129,7 @@ public class MazeGame extends JPanel
 	static Controls controls;
 	static ArrayList<Player> players;
 	static Tile[][] maze;
+	static int id;
 	
 	public MazeGame()
 	{
@@ -299,108 +300,6 @@ public class MazeGame extends JPanel
 		}
 	}
 	
-	public static void sendServerData(DataOutputStream out)
-	{
-		byte[] result = new byte[0];
-		for(int p = 0; p < players.size(); p++)
-			result = concatByteArray(result, intToByteArray((int)players.get(p).position.x),
-					intToByteArray((int)players.get(p).position.y),
-					intToByteArray((int)players.get(p).velocity.x),
-					intToByteArray((int)players.get(p).velocity.y));
-		
-		try {
-			out.write(result);
-		} catch (IOException e) {
-			System.out.println("Server failed to send data");
-		}
-	}
-	public static void sendClientData(DataOutputStream out)
-	{
-		try {
-			out.write(concatByteArray(intToByteArray(id), intToByteArray((int)players.get(id).position.x),
-					intToByteArray((int)players.get(id).position.y), intToByteArray((int)players.get(id).velocity.x),
-					intToByteArray((int)players.get(id).velocity.y)));
-		} catch (IOException e) {
-			System.out.println("Client failed to send data; id " + id);
-		}
-	}
-	public static void receiveClientData(DataInputStream in)
-	{
-		try {
-			byte[] data = new byte[4];
-			in.read(data, 0, 4);
-			int i = byteArrayToInt(data);
-			
-			in.read(data, 0, 4);
-			players.get(i).position.x = byteArrayToInt(data);
-			in.read(data, 0, 4);
-			players.get(i).position.y = byteArrayToInt(data);
-			in.read(data, 0, 4);
-			players.get(i).velocity.x = byteArrayToInt(data);
-			in.read(data, 0, 4);
-			players.get(i).velocity.y = byteArrayToInt(data);
-		} catch (IOException e) {
-			System.out.println("Server failed to receive data");
-		}
-	}
-	public static void receiveServerData(DataInputStream in)
-	{
-		for(int p = 0; p < players.size(); p++)
-		{
-			if(p == id)
-			{
-				try {
-					in.read(new byte[16], 0, 16);
-				} catch (IOException e) {
-					System.out.println("Client failed to receive data; id " + id);
-				}
-				continue;
-			}
-			
-			try {
-				byte[] data = new byte[4];
-				in.read(data, 0, 4);
-				players.get(p).position.x = byteArrayToInt(data);
-				in.read(data, 0, 4);
-				players.get(p).position.y = byteArrayToInt(data);
-				in.read(data, 0, 4);
-				players.get(p).velocity.x = byteArrayToInt(data);
-				in.read(data, 0, 4);
-				players.get(p).velocity.y = byteArrayToInt(data);
-			} catch (IOException e) {
-				System.out.println("Client failed to receive data; id " + id);
-			}
-		}
-	}
-	public static int byteArrayToInt(byte[] b) 
-	{
-	    return   b[3] & 0xFF |
-	            (b[2] & 0xFF) << 8 |
-	            (b[1] & 0xFF) << 16 |
-	            (b[0] & 0xFF) << 24;
-	}
-	public static byte[] intToByteArray(int a)
-	{
-	    return new byte[] {
-	        (byte) ((a >> 24) & 0xFF),
-	        (byte) ((a >> 16) & 0xFF),   
-	        (byte) ((a >> 8) & 0xFF),   
-	        (byte) (a & 0xFF)
-	    };
-	}
-	public static byte[] concatByteArray(byte[]... bytes)
-	{
-		int l = 0, x = 0;
-		for(byte[] b : bytes)
-			l += b.length;
-		
-		byte[] result = new byte[l];
-		for(byte[] b : bytes)
-			for(byte by : b)
-				result[x++] = by;
-		
-		return result;
-	}
 	public static void generateMaze(Tile[][] maze)
 	{
 		ArrayList<Vector[]> walls = new ArrayList<Vector[]>();
