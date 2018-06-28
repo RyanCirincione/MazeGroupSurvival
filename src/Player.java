@@ -24,8 +24,9 @@ public class Player
 	public void movement(WorldState worldState)
 	{
 		Controls controls = worldState.controls;
-		velocity.x = (controls.right ? SPEED : 0) + (controls.left ? -SPEED : 0);
-		velocity.y = (controls.down ? SPEED : 0) + (controls.up ? -SPEED : 0);
+		int speed = (int) (SPEED * (worldState.it == worldState.id ? 1.3 : 1));
+		velocity.x = (controls.right ? speed : 0) + (controls.left ? -speed : 0);
+		velocity.y = (controls.down ? speed : 0) + (controls.up ? -speed : 0);
 
 		for(int i = 0; i < 5 && checkCollide(new Vector(position.x + velocity.x, position.y), worldState); i++)
 		{
@@ -50,6 +51,10 @@ public class Player
 			for(int y = (int) ((pos.y - MazeGame.PLAYER_SIZE)/MazeGame.TILE_SIZE); y < (pos.y + MazeGame.PLAYER_SIZE)/MazeGame.TILE_SIZE; y++)
 				if(worldState.maze[x][y] == Tile.WALL)
 					return true;
+		
+		if(pos.x < 0 || pos.y < 0 || pos.x > MazeGame.MAZE_SIZE * MazeGame.TILE_SIZE || pos.y > MazeGame.MAZE_SIZE * MazeGame.TILE_SIZE)
+			return true;
+		
 		return false;
 	}
 	

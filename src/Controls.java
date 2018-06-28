@@ -2,6 +2,7 @@
 public class Controls
 {
 	public boolean right, up, left, down;
+	public Vector mouseHeld;
 	
 	public Controls()
 	{
@@ -14,6 +15,7 @@ public class Controls
 		up = u;
 		left = l;
 		down = d;
+		mouseHeld = null;
 	}
 	
 	public Controls clone()

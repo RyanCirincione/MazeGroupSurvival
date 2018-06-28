@@ -1,11 +1,17 @@
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -22,6 +28,7 @@ public class MazeGame extends JPanel {
 		JFrame frame = new JFrame("Maze Group Survival");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+		// Determine host
 		boolean host = false;
 		if (JOptionPane.showConfirmDialog(frame, "Will you be the host?") == JOptionPane.YES_OPTION) {
 			frame.setTitle("Maze Group Survival --HOST--");
@@ -31,6 +38,7 @@ public class MazeGame extends JPanel {
 		MazeGame panel = new MazeGame(host);
 		frame.getContentPane().add(panel);
 
+		// Looped thread for streaming over the network
 		Thread networkThread = new Thread() {
 			public void run() {
 				while (true) {
@@ -50,7 +58,11 @@ public class MazeGame extends JPanel {
 						panel.network.addEvent(Network.Event.EventType.PLAYER_VEL_Y, panel.worldState.id, (int) p.velocity.y);
 					}
 
-					panel.network.update(panel.worldState);
+					try {
+						panel.network.update(panel.worldState);
+					} catch (ConcurrentModificationException e) {
+						System.out.println("Concurrent mod!");
+					}
 
 					try {
 						Thread.sleep(5);
@@ -62,6 +74,7 @@ public class MazeGame extends JPanel {
 		};
 		networkThread.start();
 
+		// Looping thread for updating and rendering
 		Timer timer = new Timer();
 		timer.scheduleAtFixedRate(new TimerTask() {
 			public void run() {
@@ -75,13 +88,16 @@ public class MazeGame extends JPanel {
 		frame.setVisible(true);
 	}
 
-	static final int MAZE_SIZE = 503, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 48, PLAYER_SIZE = 8;
+	static final int MAZE_SIZE = 83, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 48, PLAYER_SIZE = 8, DASH_RANGE = (int) (TILE_SIZE * 1.5), DASH_COOLDOWN = 300, TAG_COOLDOWN = 60;
 	WorldState worldState;
+	int tagCooldown;
 
 	public MazeGame(boolean host) {
+		tagCooldown = 0;
 		worldState = new WorldState();
 		network = new Network(host, worldState);
 
+		// Colorize on initialization
 		String c = JOptionPane.showInputDialog(null, "Enter RGB of your desired player color. (Ex: \"84 0 255\")", "Maze Group Survival", JOptionPane.QUESTION_MESSAGE);
 		if (c.equals("")) {
 			c = "" + (int) (Math.random() * 255) + " " + (int) (Math.random() * 255) + " " + (int) (Math.random() * 255);
@@ -93,23 +109,22 @@ public class MazeGame extends JPanel {
 			worldState.color[2] = 12;
 		}
 
+		// Add own player to list
 		if (network.host) {
 			worldState.id = 0;
-			worldState.players.put(0,
-					new Player(new Color(worldState.color[0], worldState.color[1], worldState.color[2])));
+			worldState.players.put(worldState.id, new Player(new Color(worldState.color[0], worldState.color[1], worldState.color[2])));
 
 			System.out.println("--- Host ---");
 		} else {
 			worldState.id = worldState.players.size();
-			worldState.players.put(worldState.players.size(),
-					new Player(new Color(worldState.color[0], worldState.color[1], worldState.color[2])));
+			worldState.players.put(worldState.id, new Player(new Color(worldState.color[0], worldState.color[1], worldState.color[2])));
 
 			network.addEvent(Network.Event.EventType.NEW_PLAYER, worldState.id, worldState.color[0], worldState.color[1], worldState.color[2]);
 
 			System.out.println("--- Client: " + worldState.id + " ---");
 		}
 
-		// Create the maze and network it
+		// Create the maze
 		worldState.maze = new Tile[MAZE_SIZE][MAZE_SIZE];
 		for (int x = 0; x < worldState.maze.length; x++)
 			for (int y = 0; y < worldState.maze[x].length; y++)
@@ -151,6 +166,24 @@ public class MazeGame extends JPanel {
 				}
 			}
 		});
+		this.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				worldState.controls.mouseHeld = new Vector(e.getX(), e.getY());
+			}
+
+			public void mouseReleased(MouseEvent e) {
+				if (worldState.dashCooldown <= 0 && worldState.dashTarget != null) {
+					worldState.dashCooldown = (int) (DASH_COOLDOWN * (worldState.id == worldState.it ? 1.3 : 1));
+					worldState.players.get(worldState.id).position = worldState.dashTarget;
+				}
+				worldState.controls.mouseHeld = null;
+			}
+		});
+		this.addMouseMotionListener(new MouseMotionAdapter() {
+			public void mouseDragged(MouseEvent e) {
+				worldState.controls.mouseHeld.update(e.getX(), e.getY());
+			}
+		});
 		this.setFocusable(true);
 		this.requestFocus();
 
@@ -158,7 +191,62 @@ public class MazeGame extends JPanel {
 	}
 
 	public void tick() {
+		// Calculate dash target
+		Vector m = worldState.controls.mouseHeld;
+		worldState.dashTarget = null;
+		if (m != null) {
+			m = m.clone();
+			m.update(m.x - S_WIDTH / 2, m.y - S_HEIGHT / 2);
+			m.setLength(DASH_RANGE);
+			m.doDelta(worldState.players.get(worldState.id).position);
+
+			boolean goodSpot = true;
+			for (int x = (int) ((m.x - MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE); x < (m.x + MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE && goodSpot; x++)
+				for (int y = (int) ((m.y - MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE); y < (m.y + MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE && goodSpot; y++)
+					if (worldState.maze[x][y] == Tile.WALL)
+						goodSpot = false;
+			if (m.x < 0 || m.y < 0 || m.x > MazeGame.MAZE_SIZE * MazeGame.TILE_SIZE || m.y > MazeGame.MAZE_SIZE * MazeGame.TILE_SIZE)
+				goodSpot = false;
+
+			if (goodSpot) {
+				worldState.dashTarget = m;
+			}
+		}
+
+		if (worldState.dashCooldown > 0) {
+			worldState.dashCooldown--;
+		}
+
 		worldState.players.get(worldState.id).movement(worldState);
+
+		// Calcuate a tag
+		if (tagCooldown > 0) {
+			tagCooldown--;
+		}
+
+		if (network.host && tagCooldown <= 0) {
+			Player pIt = worldState.players.get(worldState.it);
+			Rectangle itRect = new Rectangle((int) (pIt.position.x - PLAYER_SIZE), (int) (pIt.position.y - PLAYER_SIZE), PLAYER_SIZE * 2, PLAYER_SIZE * 2);
+
+			for (Integer i : worldState.players.keySet()) {
+				if (i == worldState.it) {
+					continue;
+				}
+
+				Player p = worldState.players.get(i);
+				if (itRect.intersects(new Rectangle((int) (p.position.x - PLAYER_SIZE), (int) (p.position.y - PLAYER_SIZE), PLAYER_SIZE * 2, PLAYER_SIZE * 2))) {
+					//Before tag, if current it is this player, teleport
+					if(worldState.id == worldState.it) {
+						worldState.players.get(worldState.id).position.update(Math.random()*MAZE_SIZE*TILE_SIZE, Math.random()*MAZE_SIZE*TILE_SIZE);
+					}
+					
+					tagCooldown = TAG_COOLDOWN;
+					worldState.it = i;
+					network.addEvent(Network.Event.EventType.TAG, worldState.it);
+					break;
+				}
+			}
+		}
 	}
 
 	public void paintComponent(Graphics gr) {
@@ -166,8 +254,14 @@ public class MazeGame extends JPanel {
 		Graphics2D g = (Graphics2D) gr;
 		Vector camera = worldState.players.get(worldState.id).position.clone();
 
-		for (int x = (int) (camera.x / TILE_SIZE - S_WIDTH / 2 / TILE_SIZE - 3); x < camera.x / TILE_SIZE + S_WIDTH / 2 / TILE_SIZE + 3; x++)
-			for (int y = (int) (camera.y / TILE_SIZE - S_HEIGHT / 2 / TILE_SIZE - 3); y < camera.y / TILE_SIZE + S_HEIGHT / 2 / TILE_SIZE + 3; y++)
+		if (worldState.id == worldState.it) {
+			g.scale(0.5, 0.5);
+			g.translate(S_WIDTH / 2, S_HEIGHT / 2);
+		}
+
+		// Draw the maze
+		for (int x = (int) (camera.x / TILE_SIZE - S_WIDTH * 2 / TILE_SIZE - 3); x < camera.x / TILE_SIZE + S_WIDTH * 2 / TILE_SIZE + 3; x++)
+			for (int y = (int) (camera.y / TILE_SIZE - S_HEIGHT * 2 / TILE_SIZE - 3); y < camera.y / TILE_SIZE + S_HEIGHT * 2 / TILE_SIZE + 3; y++)
 				if (x >= 0 && y >= 0 && x < worldState.maze.length && y < worldState.maze[x].length)
 					if (worldState.maze[x][y] == Tile.WALL) {
 						g.setColor(Color.black);
@@ -177,11 +271,36 @@ public class MazeGame extends JPanel {
 						g.fillRect((int) (x * TILE_SIZE - camera.x + S_WIDTH / 2), (int) (y * TILE_SIZE - camera.y + S_HEIGHT / 2), TILE_SIZE, TILE_SIZE);
 					}
 
+		// Draw the players
 		for (Integer i : worldState.players.keySet()) {
 			Player p = worldState.players.get(i);
-			g.setColor(p.color);
+			if (worldState.it == i && Math.random() < 0.5) {
+				g.setColor(p.color.darker());
+			} else {
+				g.setColor(p.color);
+			}
 			g.fillRoundRect((int) (p.position.x - camera.x + S_WIDTH / 2 - PLAYER_SIZE), (int) (p.position.y - camera.y + S_HEIGHT / 2 - PLAYER_SIZE), PLAYER_SIZE * 2,
 					PLAYER_SIZE * 2, 2, 2);
+		}
+
+		// Draw dash target
+		if (worldState.dashCooldown <= 0 && worldState.dashTarget != null) {
+			Player p = worldState.players.get(worldState.id);
+			Vector t = worldState.dashTarget;
+			g.setColor(new Color(p.color.getRed(), p.color.getGreen(), p.color.getBlue(), 128));
+			g.fillRoundRect((int) (t.x - camera.x + S_WIDTH / 2 - PLAYER_SIZE), (int) (t.y - camera.y + S_HEIGHT / 2 - PLAYER_SIZE), PLAYER_SIZE * 2, PLAYER_SIZE * 2, 2, 2);
+		}
+
+		// Draw cooldown indicator
+		g.setColor(Color.cyan);
+		g.setStroke(new BasicStroke(3));
+		g.drawArc(S_WIDTH / 2 - PLAYER_SIZE, S_HEIGHT / 2 - PLAYER_SIZE, PLAYER_SIZE * 2, PLAYER_SIZE * 2, 90,
+				(int) (360 * worldState.dashCooldown / (DASH_COOLDOWN * (worldState.id == worldState.it ? 1.3 : 1))));
+
+		// Draw box for person whose it vision
+		if (worldState.id == worldState.it) {
+			g.setColor(Color.blue);
+			g.drawRect(0, 0, S_WIDTH, S_HEIGHT);
 		}
 	}
 
@@ -222,7 +341,7 @@ public class MazeGame extends JPanel {
 		}
 
 		int x = 0, y = 0;
-		for (int i = 0; i < MAZE_SIZE; i++) {
+		for (int i = 0; i < MAZE_SIZE * MAZE_SIZE / 50; i++) {
 			while (((x + y) % 2 == 0 || (maze[x][y] == Tile.SPACE && rand.nextDouble() < 0.4)) || x == 0 || y == 0 || x == MAZE_SIZE - 1 || y == MAZE_SIZE - 1) {
 				x = (int) (rand.nextDouble() * MAZE_SIZE);
 				y = (int) (rand.nextDouble() * MAZE_SIZE);

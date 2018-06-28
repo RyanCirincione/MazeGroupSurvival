@@ -6,7 +6,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 
 import javax.swing.JOptionPane;
 
@@ -69,28 +68,20 @@ public class Network {
 
 	public void update(WorldState worldState) {
 		if (host) {
-			Iterator<DataOutputStream> output = out.iterator();
-
-			while (output.hasNext()) {
-				DataOutputStream o = output.next();
-
+			for(int i = 0; i < out.size(); i++) {
 				try {
-					sendServerData(o);
+					sendServerData(out.get(i));
 				} catch (IOException e) {
-					output.remove();
+					out.remove(i--);
 				}
 			}
 			events.clear();
 
-			Iterator<DataInputStream> input = in.iterator();
-
-			while (input.hasNext()) {
-				DataInputStream i = input.next();
-
+			for(int i = 0; i < in.size(); i++) {
 				try {
-					receiveClientData(i, worldState);
+					receiveClientData(in.get(i), worldState);
 				} catch (IOException e) {
-					input.remove();
+					in.remove(i--);
 				}
 			}
 		} else {
@@ -121,6 +112,7 @@ public class Network {
 			data = concatByteArray(data, intToByteArray((int) p.position.y));
 			data = concatByteArray(data, intToByteArray(p.color.getRed()), intToByteArray(p.color.getGreen()), intToByteArray(p.color.getBlue()));
 		}
+		data = concatByteArray(data, intToByteArray(worldState.it));
 
 		try {
 			out.write(data);
@@ -155,6 +147,10 @@ public class Network {
 
 				worldState.players.put(id, new Player(new Vector(x, y), new Color(r, g, b)));
 			}
+			
+			in.read(data);
+			int it = byteArrayToInt(data);
+			worldState.it = it;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -169,19 +165,6 @@ public class Network {
 		}
 
 		out.write(data);
-		// byte[] result = new byte[0];
-		// for (int p = 0; p < worldState.players.size(); p++)
-		// result = concatByteArray(result, intToByteArray((int)
-		// worldState.players.get(p).position.x),
-		// intToByteArray((int) worldState.players.get(p).position.y),
-		// intToByteArray((int) worldState.players.get(p).velocity.x),
-		// intToByteArray((int) worldState.players.get(p).velocity.y));
-		//
-		// try {
-		// out.write(result);
-		// } catch (IOException e) {
-		// System.out.println("Server failed to send data");
-		// }
 	}
 
 	public void sendClientData(DataOutputStream out) {
@@ -192,23 +175,12 @@ public class Network {
 			data = concatByteArray(data, e.data);
 		}
 
-		events.clear();
-
 		try {
 			out.write(data);
 		} catch (IOException e1) {
 			System.err.println("Failed to send data to server. Data:\n" + Arrays.toString(data));
 			e1.printStackTrace();
 		}
-		// try {
-		// out.write(concatByteArray(intToByteArray(worldState.id), intToByteArray((int)
-		// worldState.players.get(worldState.id).position.x),
-		// intToByteArray((int) worldState.players.get(worldState.id).position.y),
-		// intToByteArray((int) worldState.players.get(worldState.id).velocity.x),
-		// intToByteArray((int) worldState.players.get(worldState.id).velocity.y)));
-		// } catch (IOException e) {
-		// System.out.println("Client failed to send data; id " + worldState.id);
-		// }
 	}
 
 	public void receiveClientData(DataInputStream in, WorldState worldState) throws IOException {
@@ -281,27 +253,12 @@ public class Network {
 				this.addEvent(Event.EventType.NEW_PLAYER, id, r, g, bl);
 
 				break;
+			case TAG:
+				break;
 			default:
 				System.out.println("Unknown event received. Code: " + byteArrayToInt(b));
 			}
 		}
-
-		// try {
-		// byte[] data = new byte[4];
-		// in.read(data, 0, 4);
-		// int i = byteArrayToInt(data);
-		//
-		// in.read(data, 0, 4);
-		// worldState.players.get(i).position.x = byteArrayToInt(data);
-		// in.read(data, 0, 4);
-		// worldState.players.get(i).position.y = byteArrayToInt(data);
-		// in.read(data, 0, 4);
-		// worldState.players.get(i).velocity.x = byteArrayToInt(data);
-		// in.read(data, 0, 4);
-		// worldState.players.get(i).velocity.y = byteArrayToInt(data);
-		// } catch (IOException e) {
-		// System.out.println("Server failed to receive data");
-		// }
 	}
 
 	public void receiveServerData(DataInputStream in, WorldState worldState) {
@@ -386,6 +343,12 @@ public class Network {
 					worldState.players.put(id, new Player(new Color(r, g, bl)));
 
 					break;
+				case TAG:
+					in.read(b);
+					id = byteArrayToInt(b);
+					
+					worldState.it = id;
+					break;
 				default:
 					System.out.println("Unknown event received. Code: " + byteArrayToInt(b));
 				}
@@ -393,31 +356,6 @@ public class Network {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
-		// for (int p = 0; p < worldState.players.size(); p++) {
-		// if (p == worldState.id) {
-		// try {
-		// in.read(new byte[16], 0, 16);
-		// } catch (IOException e) {
-		// System.out.println("Client failed to receive data; id " + worldState.id);
-		// }
-		// continue;
-		// }
-		//
-		// try {
-		// byte[] data = new byte[4];
-		// in.read(data, 0, 4);
-		// worldState.players.get(p).position.x = byteArrayToInt(data);
-		// in.read(data, 0, 4);
-		// worldState.players.get(p).position.y = byteArrayToInt(data);
-		// in.read(data, 0, 4);
-		// worldState.players.get(p).velocity.x = byteArrayToInt(data);
-		// in.read(data, 0, 4);
-		// worldState.players.get(p).velocity.y = byteArrayToInt(data);
-		// } catch (IOException e) {
-		// System.out.println("Client failed to receive data; id " + worldState.id);
-		// }
-		// }
 	}
 
 	public static int byteArrayToInt(byte[] b) {
@@ -451,7 +389,7 @@ public class Network {
 		}
 
 		public static enum EventType {
-			UNKNOWN, PLAYER_X, PLAYER_Y, PLAYER_VEL_X, PLAYER_VEL_Y, NEW_PLAYER;
+			UNKNOWN, PLAYER_X, PLAYER_Y, PLAYER_VEL_X, PLAYER_VEL_Y, NEW_PLAYER, TAG;
 
 			public int encode() {
 				switch (this) {
@@ -465,9 +403,13 @@ public class Network {
 					return 3;
 				case NEW_PLAYER:
 					return 4;
-				default:
+				case TAG:
+					return 5;
+				case UNKNOWN:
 					return -1;
 				}
+
+				return -1;
 			}
 
 			public static EventType decode(int code) {
@@ -482,9 +424,13 @@ public class Network {
 					return PLAYER_VEL_Y;
 				case 4:
 					return NEW_PLAYER;
-				default:
+				case 5:
+					return TAG;
+				case -1:
 					return UNKNOWN;
 				}
+
+				return UNKNOWN;
 			}
 		}
 	}
