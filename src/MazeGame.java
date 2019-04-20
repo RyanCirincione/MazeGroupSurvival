@@ -83,7 +83,7 @@ public class MazeGame extends JPanel {
 		frame.setVisible(true);
 	}
 
-	static final int MAZE_SIZE = 83-83+11, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 48, PLAYER_SIZE = 8, DASH_RANGE = (int) (TILE_SIZE * 1.85), DASH_COOLDOWN = 300, TAG_COOLDOWN = 60;
+	static final int MAZE_SIZE = 83, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 48, PLAYER_SIZE = 8, DASH_RANGE = (int) (TILE_SIZE * 1.85), DASH_COOLDOWN = 300, TAG_COOLDOWN = 60;
 	WorldState worldState;
 	Controls controls;
 	int tagCooldown;
@@ -196,7 +196,7 @@ public class MazeGame extends JPanel {
 		}
 		
 		// Add bombs
-		if(network.host && worldState.bombs.size() < 50 && Math.random() < 0.001) {
+		if(network.host && worldState.bombs.size() < 50) {
 			Vector v = new Vector(Math.random() * worldState.maze.length, Math.random() * worldState.maze[0].length);
 			while(worldState.maze[(int) v.x][(int) v.y] == Tile.WALL) {
 				v = new Vector(Math.random() * worldState.maze.length, Math.random() * worldState.maze[0].length);
