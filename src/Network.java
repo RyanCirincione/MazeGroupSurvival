@@ -51,6 +51,8 @@ public class Network {
 			String serverAddress = JOptionPane.showInputDialog(null, "Enter IP Address of the Host:", "Maze Group Survival", JOptionPane.QUESTION_MESSAGE);
 			if (serverAddress == null) {
 				System.exit(0);
+			} else if(serverAddress.equals("")) {
+				serverAddress = "localhost";
 			}
 			
 			int port = PORT, i = serverAddress.indexOf(":");
@@ -120,6 +122,12 @@ public class Network {
 			data = concatByteArray(data, intToByteArray(p.color.getRed()), intToByteArray(p.color.getGreen()), intToByteArray(p.color.getBlue()));
 		}
 		data = concatByteArray(data, intToByteArray(worldState.it));
+		
+		data = concatByteArray(data, intToByteArray(worldState.bombs.size()));
+		for(Vector v : worldState.bombs) {
+			data = concatByteArray(data, intToByteArray((int) v.x));
+			data = concatByteArray(data, intToByteArray((int) v.y));
+		}
 
 		try {
 			out.write(data);
@@ -158,6 +166,18 @@ public class Network {
 			in.read(data);
 			int it = byteArrayToInt(data);
 			worldState.it = it;
+			
+			in.read(data);
+			int bombs = byteArrayToInt(data);
+			
+			for(int i = 0; i < bombs; i++) {
+				in.read(data);
+				int x = byteArrayToInt(data);
+				in.read(data);
+				int y = byteArrayToInt(data);
+				
+				worldState.bombs.add(new Vector(x, y));
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -261,6 +281,9 @@ public class Network {
 
 				break;
 			case TAG:
+			case NEW_BOMB:
+			case DESTROY_BOMB:
+				System.out.println("Client sent server-reserved event. Code: " + byteArrayToInt(b));
 				break;
 			default:
 				System.out.println("Unknown event received. Code: " + byteArrayToInt(b));
@@ -356,6 +379,22 @@ public class Network {
 					
 					worldState.it = id;
 					break;
+				case NEW_BOMB:
+					in.read(b);
+					x = byteArrayToInt(b);
+					in.read(b);
+					y = byteArrayToInt(b);
+					
+					worldState.bombs.add(new Vector(x, y));
+					
+					break;
+				case DESTROY_BOMB:
+					in.read(b);
+					i = byteArrayToInt(b);
+					
+					worldState.bombs.remove(i);
+					
+					break;
 				default:
 					System.out.println("Unknown event received. Code: " + byteArrayToInt(b));
 				}
@@ -396,7 +435,7 @@ public class Network {
 		}
 
 		public static enum EventType {
-			UNKNOWN, PLAYER_X, PLAYER_Y, PLAYER_VEL_X, PLAYER_VEL_Y, NEW_PLAYER, TAG;
+			UNKNOWN, PLAYER_X, PLAYER_Y, PLAYER_VEL_X, PLAYER_VEL_Y, NEW_PLAYER, TAG, NEW_BOMB, DESTROY_BOMB;
 
 			public int encode() {
 				switch (this) {
@@ -412,6 +451,10 @@ public class Network {
 					return 4;
 				case TAG:
 					return 5;
+				case NEW_BOMB:
+					return 6;
+				case DESTROY_BOMB:
+					return 7;
 				case UNKNOWN:
 					return -1;
 				}
@@ -433,6 +476,10 @@ public class Network {
 					return NEW_PLAYER;
 				case 5:
 					return TAG;
+				case 6:
+					return NEW_BOMB;
+				case 7:
+					return DESTROY_BOMB;
 				case -1:
 					return UNKNOWN;
 				}

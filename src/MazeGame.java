@@ -83,7 +83,7 @@ public class MazeGame extends JPanel {
 		frame.setVisible(true);
 	}
 
-	static final int MAZE_SIZE = 83, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 48, PLAYER_SIZE = 8, DASH_RANGE = (int) (TILE_SIZE * 1.85), DASH_COOLDOWN = 300, TAG_COOLDOWN = 60;
+	static final int MAZE_SIZE = 83-83+11, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 48, PLAYER_SIZE = 8, DASH_RANGE = (int) (TILE_SIZE * 1.85), DASH_COOLDOWN = 300, TAG_COOLDOWN = 60;
 	WorldState worldState;
 	Controls controls;
 	int tagCooldown;
@@ -194,6 +194,18 @@ public class MazeGame extends JPanel {
 				}
 			}
 		}
+		
+		// Add bombs
+		if(network.host && worldState.bombs.size() < 50 && Math.random() < 0.001) {
+			Vector v = new Vector(Math.random() * worldState.maze.length, Math.random() * worldState.maze[0].length);
+			while(worldState.maze[(int) v.x][(int) v.y] == Tile.WALL) {
+				v = new Vector(Math.random() * worldState.maze.length, Math.random() * worldState.maze[0].length);
+			}
+			v.factor(TILE_SIZE);
+			
+			worldState.bombs.add(v);
+			network.addEvent(Network.Event.EventType.NEW_BOMB, (int) (v.x), (int) (v.y));
+		}
 	}
 
 	public void paintComponent(Graphics gr) {
@@ -207,9 +219,9 @@ public class MazeGame extends JPanel {
 		}
 
 		// Draw the maze
-		for (int x = (int) (camera.x / TILE_SIZE - S_WIDTH * 2 / TILE_SIZE - 3); x < camera.x / TILE_SIZE + S_WIDTH * 2 / TILE_SIZE + 3; x++)
-			for (int y = (int) (camera.y / TILE_SIZE - S_HEIGHT * 2 / TILE_SIZE - 3); y < camera.y / TILE_SIZE + S_HEIGHT * 2 / TILE_SIZE + 3; y++)
-				if (x >= 0 && y >= 0 && x < worldState.maze.length && y < worldState.maze[x].length)
+		for (int x = (int) (camera.x / TILE_SIZE - S_WIDTH * 2 / TILE_SIZE - 3); x < camera.x / TILE_SIZE + S_WIDTH * 2 / TILE_SIZE + 3; x++) {
+			for (int y = (int) (camera.y / TILE_SIZE - S_HEIGHT * 2 / TILE_SIZE - 3); y < camera.y / TILE_SIZE + S_HEIGHT * 2 / TILE_SIZE + 3; y++) {
+				if (x >= 0 && y >= 0 && x < worldState.maze.length && y < worldState.maze[x].length) {
 					if (worldState.maze[x][y] == Tile.WALL) {
 						g.setColor(Color.black);
 						g.fillRect((int) (x * TILE_SIZE - camera.x + S_WIDTH / 2), (int) (y * TILE_SIZE - camera.y + S_HEIGHT / 2), TILE_SIZE, TILE_SIZE);
@@ -217,6 +229,15 @@ public class MazeGame extends JPanel {
 						g.setColor(Color.white.darker());
 						g.fillRect((int) (x * TILE_SIZE - camera.x + S_WIDTH / 2), (int) (y * TILE_SIZE - camera.y + S_HEIGHT / 2), TILE_SIZE, TILE_SIZE);
 					}
+				}
+			}
+		}
+		
+		// Draw bombs
+		g.setColor(Color.orange);
+		for(Vector b : worldState.bombs) {
+			g.fillOval((int) (b.x - camera.x + S_WIDTH / 2 - 5), (int) (b.y - camera.y + S_HEIGHT / 2 - 5), 11, 11);
+		}
 
 		// Draw the players
 		for (Integer i : worldState.players.keySet()) {
