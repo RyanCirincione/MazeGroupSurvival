@@ -13,6 +13,7 @@ public class Network {
 	ArrayList<Event> events;
 	ArrayList<DataOutputStream> out;
 	ArrayList<DataInputStream> in;
+	static final int PORT = 9489;
 	boolean host;
 
 	public Network(boolean h, WorldState worldState) {
@@ -24,7 +25,7 @@ public class Network {
 		if (host) {
 			try {
 				@SuppressWarnings("resource")
-				ServerSocket listener = new ServerSocket(9489);
+				ServerSocket listener = new ServerSocket(PORT);
 
 				Thread t = new Thread() {
 					public void run() {
@@ -51,10 +52,16 @@ public class Network {
 			if (serverAddress == null) {
 				System.exit(0);
 			}
+			
+			int port = PORT, i = serverAddress.indexOf(":");
+			if(i >= 0) {
+				port = Integer.parseInt(serverAddress.substring(i + 1));
+				serverAddress = serverAddress.substring(0, i);
+			}
 
 			Socket socket;
 			try {
-				socket = new Socket(serverAddress, 9489);
+				socket = new Socket(serverAddress, port);
 
 				out.add(new DataOutputStream(socket.getOutputStream()));
 				in.add(new DataInputStream(socket.getInputStream()));
