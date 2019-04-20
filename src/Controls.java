@@ -4,19 +4,16 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 
-public class Controls implements KeyListener, MouseListener, MouseMotionListener
-{
+public class Controls implements KeyListener, MouseListener, MouseMotionListener {
 	public boolean right, up, left, down;
 	public Vector mouseHeld;
 	WorldState worldState;
-	
-	public Controls(WorldState w)
-	{
+
+	public Controls(WorldState w) {
 		this(w, false, false, false, false);
 	}
-	
-	public Controls(WorldState w, boolean r, boolean u, boolean l, boolean d)
-	{
+
+	public Controls(WorldState w, boolean r, boolean u, boolean l, boolean d) {
 		right = r;
 		up = u;
 		left = l;
@@ -24,32 +21,31 @@ public class Controls implements KeyListener, MouseListener, MouseMotionListener
 		mouseHeld = null;
 		worldState = w;
 	}
-	
-	public Controls clone()
-	{
+
+	public Controls clone() {
 		return new Controls(worldState, right, up, left, down);
 	}
-	
+
 	public void mouseDragged(MouseEvent e) {
 		worldState.controls.mouseHeld.update(e.getX(), e.getY());
 	}
 
 	public void mouseMoved(MouseEvent arg0) {
-		
+
 	}
 
 	public void mouseClicked(MouseEvent arg0) {
-		
+
 	}
 
 	public void mouseEntered(MouseEvent arg0) {
-		
+
 	}
 
 	public void mouseExited(MouseEvent arg0) {
-		
+
 	}
-	
+
 	public void mousePressed(MouseEvent e) {
 		mouseHeld = new Vector(e.getX(), e.getY());
 	}
@@ -61,7 +57,7 @@ public class Controls implements KeyListener, MouseListener, MouseMotionListener
 		}
 		worldState.controls.mouseHeld = null;
 	}
-	
+
 	public void keyPressed(KeyEvent e) {
 		switch (e.getKeyCode()) {
 		case KeyEvent.VK_D:
@@ -78,7 +74,7 @@ public class Controls implements KeyListener, MouseListener, MouseMotionListener
 			break;
 		}
 	}
-	
+
 	public void keyReleased(KeyEvent e) {
 		switch (e.getKeyCode()) {
 		case KeyEvent.VK_D:
@@ -97,6 +93,6 @@ public class Controls implements KeyListener, MouseListener, MouseMotionListener
 	}
 
 	public void keyTyped(KeyEvent arg0) {
-		
+
 	}
 }

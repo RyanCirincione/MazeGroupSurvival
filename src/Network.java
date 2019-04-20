@@ -51,12 +51,12 @@ public class Network {
 			String serverAddress = JOptionPane.showInputDialog(null, "Enter IP Address of the Host:", "Maze Group Survival", JOptionPane.QUESTION_MESSAGE);
 			if (serverAddress == null) {
 				System.exit(0);
-			} else if(serverAddress.equals("")) {
+			} else if (serverAddress.equals("")) {
 				serverAddress = "localhost";
 			}
-			
+
 			int port = PORT, i = serverAddress.indexOf(":");
-			if(i >= 0) {
+			if (i >= 0) {
 				port = Integer.parseInt(serverAddress.substring(i + 1));
 				serverAddress = serverAddress.substring(0, i);
 			}
@@ -77,7 +77,7 @@ public class Network {
 
 	public void update(WorldState worldState) {
 		if (host) {
-			for(int i = 0; i < out.size(); i++) {
+			for (int i = 0; i < out.size(); i++) {
 				try {
 					sendServerData(out.get(i));
 				} catch (IOException e) {
@@ -86,7 +86,7 @@ public class Network {
 			}
 			events.clear();
 
-			for(int i = 0; i < in.size(); i++) {
+			for (int i = 0; i < in.size(); i++) {
 				try {
 					receiveClientData(in.get(i), worldState);
 				} catch (IOException e) {
@@ -122,9 +122,9 @@ public class Network {
 			data = concatByteArray(data, intToByteArray(p.color.getRed()), intToByteArray(p.color.getGreen()), intToByteArray(p.color.getBlue()));
 		}
 		data = concatByteArray(data, intToByteArray(worldState.it));
-		
+
 		data = concatByteArray(data, intToByteArray(worldState.bombs.size()));
-		for(Vector v : worldState.bombs) {
+		for (Vector v : worldState.bombs) {
 			data = concatByteArray(data, intToByteArray((int) v.x));
 			data = concatByteArray(data, intToByteArray((int) v.y));
 		}
@@ -162,20 +162,20 @@ public class Network {
 
 				worldState.players.put(id, new Player(new Vector(x, y), new Color(r, g, b)));
 			}
-			
+
 			in.read(data);
 			int it = byteArrayToInt(data);
 			worldState.it = it;
-			
+
 			in.read(data);
 			int bombs = byteArrayToInt(data);
-			
-			for(int i = 0; i < bombs; i++) {
+
+			for (int i = 0; i < bombs; i++) {
 				in.read(data);
 				int x = byteArrayToInt(data);
 				in.read(data);
 				int y = byteArrayToInt(data);
-				
+
 				worldState.bombs.add(new Vector(x, y));
 			}
 		} catch (IOException e) {
@@ -376,7 +376,7 @@ public class Network {
 				case TAG:
 					in.read(b);
 					id = byteArrayToInt(b);
-					
+
 					worldState.it = id;
 					break;
 				case NEW_BOMB:
@@ -384,16 +384,16 @@ public class Network {
 					x = byteArrayToInt(b);
 					in.read(b);
 					y = byteArrayToInt(b);
-					
+
 					worldState.bombs.add(new Vector(x, y));
-					
+
 					break;
 				case DESTROY_BOMB:
 					in.read(b);
 					i = byteArrayToInt(b);
-					
+
 					worldState.bombs.remove(i);
-					
+
 					break;
 				default:
 					System.out.println("Unknown event received. Code: " + byteArrayToInt(b));

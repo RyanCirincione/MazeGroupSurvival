@@ -34,28 +34,26 @@ public class Vector implements java.io.Serializable {
 				x = target.x;
 			else
 				x += delta.x;
-		else if (x > target.x)
-			if (x - delta.x < target.x)
-				x = target.x;
-			else
-				x -= delta.x;
+		else if (x > target.x) if (x - delta.x < target.x)
+			x = target.x;
+		else
+			x -= delta.x;
 
 		if (y < target.y)
 			if (y + delta.y > target.y)
 				y = target.y;
 			else
 				y += delta.y;
-		else if (y > target.y)
-			if (y - delta.y < target.y)
-				y = target.y;
-			else
-				y -= delta.y;
+		else if (y > target.y) if (y - delta.y < target.y)
+			y = target.y;
+		else
+			y -= delta.y;
 	}
-	
+
 	public Vector plus(Vector v) {
 		return new Vector(x + v.x, y + v.y);
 	}
-	
+
 	public Vector minus(Vector v) {
 		return new Vector(x - v.x, y - v.y);
 	}
@@ -63,19 +61,19 @@ public class Vector implements java.io.Serializable {
 	public Vector toPositive() {
 		return new Vector(Math.abs(x), Math.abs(y));
 	}
-	
+
 	public Vector setLength(double l) {
 		double len = this.length();
 		x = x * l / len;
 		y = y * l / len;
-		
+
 		return this;
 	}
 
 	public double length() {
 		return Math.sqrt(x * x + y * y);
 	}
-	
+
 	public Vector lerp(Vector v, double distance) {
 		return this.plus(v.minus(this).setLength(distance));
 	}

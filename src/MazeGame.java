@@ -145,12 +145,12 @@ public class MazeGame extends JPanel {
 		if (m != null) {
 			m = m.clone();
 			m.update(m.x - S_WIDTH / 2, m.y - S_HEIGHT / 2);
-			if(m.length() > DASH_RANGE) {
+			if (m.length() > DASH_RANGE) {
 				m.setLength(DASH_RANGE);
 			}
 
-			while(!goodTeleportSpot(m.plus(worldState.players.get(worldState.id).position), worldState.maze) && m.length() > PLAYER_SIZE * 3) {
-				m.setLength(m.length()*0.975);
+			while (!goodTeleportSpot(m.plus(worldState.players.get(worldState.id).position), worldState.maze) && m.length() > PLAYER_SIZE * 3) {
+				m.setLength(m.length() * 0.975);
 			}
 
 			m.doDelta(worldState.players.get(worldState.id).position);
@@ -182,11 +182,11 @@ public class MazeGame extends JPanel {
 
 				Player p = worldState.players.get(i);
 				if (itRect.intersects(new Rectangle((int) (p.position.x - PLAYER_SIZE), (int) (p.position.y - PLAYER_SIZE), PLAYER_SIZE * 2, PLAYER_SIZE * 2))) {
-					//Before tag, if current it is this player, teleport
-					if(worldState.id == worldState.it) {
-						worldState.players.get(worldState.id).position.update(Math.random()*MAZE_SIZE*TILE_SIZE, Math.random()*MAZE_SIZE*TILE_SIZE);
+					// Before tag, if current it is this player, teleport
+					if (worldState.id == worldState.it) {
+						worldState.players.get(worldState.id).position.update(Math.random() * MAZE_SIZE * TILE_SIZE, Math.random() * MAZE_SIZE * TILE_SIZE);
 					}
-					
+
 					tagCooldown = TAG_COOLDOWN;
 					worldState.it = i;
 					network.addEvent(Network.Event.EventType.TAG, worldState.it);
@@ -194,15 +194,15 @@ public class MazeGame extends JPanel {
 				}
 			}
 		}
-		
+
 		// Add bombs
-		if(network.host && worldState.bombs.size() < 50) {
+		if (network.host && worldState.bombs.size() < 50) {
 			Vector v = new Vector(Math.random() * worldState.maze.length, Math.random() * worldState.maze[0].length);
-			while(worldState.maze[(int) v.x][(int) v.y] == Tile.WALL) {
+			while (worldState.maze[(int) v.x][(int) v.y] == Tile.WALL) {
 				v = new Vector(Math.random() * worldState.maze.length, Math.random() * worldState.maze[0].length);
 			}
 			v.factor(TILE_SIZE);
-			
+
 			worldState.bombs.add(v);
 			network.addEvent(Network.Event.EventType.NEW_BOMB, (int) (v.x), (int) (v.y));
 		}
@@ -232,10 +232,10 @@ public class MazeGame extends JPanel {
 				}
 			}
 		}
-		
+
 		// Draw bombs
 		g.setColor(Color.orange);
-		for(Vector b : worldState.bombs) {
+		for (Vector b : worldState.bombs) {
 			g.fillOval((int) (b.x - camera.x + S_WIDTH / 2 - 5), (int) (b.y - camera.y + S_HEIGHT / 2 - 5), 11, 11);
 		}
 
@@ -271,7 +271,7 @@ public class MazeGame extends JPanel {
 			g.drawRect(0, 0, S_WIDTH, S_HEIGHT);
 		}
 	}
-	
+
 	public static boolean goodTeleportSpot(Vector spot, Tile[][] maze) {
 		boolean goodSpot = true;
 		for (int x = (int) ((spot.x - MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE); x < (spot.x + MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE && goodSpot; x++) {
@@ -285,7 +285,7 @@ public class MazeGame extends JPanel {
 		if (spot.x < 0 || spot.y < 0 || spot.x > MazeGame.MAZE_SIZE * MazeGame.TILE_SIZE || spot.y > MazeGame.MAZE_SIZE * MazeGame.TILE_SIZE) {
 			goodSpot = false;
 		}
-		
+
 		return goodSpot;
 	}
 
