@@ -20,13 +20,13 @@ public class MazeGame extends JPanel {
 	Network network;
 
 	public static void main(String[] args) throws IOException {
-		JFrame frame = new JFrame("Maze Group Survival");
+		JFrame frame = new JFrame("Maze Tag");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
 		// Determine host
 		boolean host = false;
 		if (JOptionPane.showConfirmDialog(frame, "Will you be the host?") == JOptionPane.YES_OPTION) {
-			frame.setTitle("Maze Group Survival --HOST--");
+			frame.setTitle("Maze Tag --HOST--");
 			host = true;
 		}
 
@@ -212,7 +212,7 @@ public class MazeGame extends JPanel {
 		for (int i = 0; i < worldState.bombs.size(); i++) {
 			Bomb b = worldState.bombs.get(i);
 			b.tick(worldState);
-			if(network.host && b.velocity.length() > 0.01) {
+			if (network.host && b.velocity.length() > 0.01) {
 				network.addEvent(Network.Event.EventType.BOMB_UPDATE, i, (int) (b.position.x), (int) (b.position.y), (int) (b.velocity.x), (int) (b.velocity.y));
 			}
 		}
@@ -282,6 +282,24 @@ public class MazeGame extends JPanel {
 		if (worldState.id == worldState.it) {
 			g.setColor(Color.blue);
 			g.drawRect(0, 0, S_WIDTH, S_HEIGHT);
+		}
+
+		if (worldState.id == worldState.it) {
+			g.translate(-S_WIDTH / 2, -S_HEIGHT / 2);
+			g.scale(2, 2);
+		}
+
+		// Draw player health
+		g.setColor(Color.BLACK);
+		g.fillRect(S_WIDTH - 110, 0, 110, 5 + 30 * worldState.players.size());
+		for (Integer i : worldState.players.keySet()) {
+			Player player = worldState.players.get(i);
+
+			g.setColor(player.color);
+			g.fillRect(S_WIDTH - 105, 5 + 30 * i, (int) (100 * (double) player.health / Player.MAX_HEALTH), 25);
+
+			g.setColor(Color.BLACK);
+			g.drawString("" + player.health + "/" + Player.MAX_HEALTH, S_WIDTH - 100, 25 + 30 * i);
 		}
 	}
 

@@ -119,7 +119,7 @@ public class Network {
 			data = concatByteArray(data, intToByteArray(i));
 			data = concatByteArray(data, intToByteArray((int) p.position.x));
 			data = concatByteArray(data, intToByteArray((int) p.position.y));
-			data = concatByteArray(data, intToByteArray(p.color.getRed()), intToByteArray(p.color.getGreen()), intToByteArray(p.color.getBlue()));
+			data = concatByteArray(data, intToByteArray(p.color.getRed()), intToByteArray(p.color.getGreen()), intToByteArray(p.color.getBlue()), intToByteArray(p.health));
 		}
 		data = concatByteArray(data, intToByteArray(worldState.it));
 
@@ -161,8 +161,10 @@ public class Network {
 				int g = byteArrayToInt(data);
 				in.read(data);
 				int b = byteArrayToInt(data);
+				in.read(data);
+				int health = byteArrayToInt(data);
 
-				worldState.players.put(id, new Player(new Vector(x, y), new Color(r, g, b)));
+				worldState.players.put(id, new Player(new Vector(x, y), new Color(r, g, b), health));
 			}
 
 			in.read(data);
@@ -420,7 +422,7 @@ public class Network {
 
 					worldState.bombs.get(index).position.set(x, y);
 					worldState.bombs.get(index).velocity.set(vx, vy);
-					
+
 					break;
 				default:
 					System.out.println("Unknown event received. Code: " + byteArrayToInt(b));

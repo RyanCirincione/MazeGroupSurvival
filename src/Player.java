@@ -1,22 +1,24 @@
 import java.awt.Color;
 
 public class Player {
-	final int SPEED = 4;
+	public static final int SPEED = 4, MAX_HEALTH = 10;
 	public Vector position, velocity;
 	public Color color;
+	public int health;
 
 	public Player(Color c) {
-		this(new Vector(MazeGame.TILE_SIZE * 1.5, MazeGame.TILE_SIZE * 1.5), c);
+		this(new Vector(MazeGame.TILE_SIZE * 1.5, MazeGame.TILE_SIZE * 1.5), c, MAX_HEALTH);
 	}
 
-	public Player(Vector pos, Color c) {
-		this(pos, new Vector(0, 0), c);
+	public Player(Vector pos, Color c, int h) {
+		this(pos, new Vector(0, 0), c, h);
 	}
 
-	public Player(Vector pos, Vector vel, Color c) {
+	public Player(Vector pos, Vector vel, Color c, int h) {
 		position = pos.clone();
 		velocity = vel.clone();
 		color = c;
+		health = h;
 	}
 
 	public void movement(WorldState worldState) {
