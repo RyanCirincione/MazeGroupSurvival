@@ -27,7 +27,7 @@ public class Controls implements KeyListener, MouseListener, MouseMotionListener
 	}
 
 	public void mouseDragged(MouseEvent e) {
-		worldState.controls.mouseHeld.update(e.getX(), e.getY());
+		worldState.controls.mouseHeld.set(e.getX(), e.getY());
 	}
 
 	public void mouseMoved(MouseEvent arg0) {

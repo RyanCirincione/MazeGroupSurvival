@@ -87,6 +87,7 @@ public class MazeGame extends JPanel {
 	WorldState worldState;
 	Controls controls;
 	int tagCooldown;
+	// TODO tagging host doesnt seem to tp client?
 
 	public MazeGame(boolean host) {
 		tagCooldown = 0;
@@ -144,7 +145,7 @@ public class MazeGame extends JPanel {
 		worldState.dashTarget = null;
 		if (m != null) {
 			m = m.clone();
-			m.update(m.x - S_WIDTH / 2, m.y - S_HEIGHT / 2);
+			m.set(m.x - S_WIDTH / 2, m.y - S_HEIGHT / 2);
 			if (m.length() > DASH_RANGE) {
 				m.setLength(DASH_RANGE);
 			}
@@ -184,7 +185,7 @@ public class MazeGame extends JPanel {
 				if (itRect.intersects(new Rectangle((int) (p.position.x - PLAYER_SIZE), (int) (p.position.y - PLAYER_SIZE), PLAYER_SIZE * 2, PLAYER_SIZE * 2))) {
 					// Before tag, if current it is this player, teleport
 					if (worldState.id == worldState.it) {
-						worldState.players.get(worldState.id).position.update(Math.random() * MAZE_SIZE * TILE_SIZE, Math.random() * MAZE_SIZE * TILE_SIZE);
+						worldState.players.get(worldState.id).position.set(Math.random() * MAZE_SIZE * TILE_SIZE, Math.random() * MAZE_SIZE * TILE_SIZE);
 					}
 
 					tagCooldown = TAG_COOLDOWN;
@@ -203,8 +204,17 @@ public class MazeGame extends JPanel {
 			}
 			v.factor(TILE_SIZE);
 
-			worldState.bombs.add(v);
+			worldState.bombs.add(new Bomb(v));
 			network.addEvent(Network.Event.EventType.NEW_BOMB, (int) (v.x), (int) (v.y));
+		}
+
+		// Update bombs
+		for (int i = 0; i < worldState.bombs.size(); i++) {
+			Bomb b = worldState.bombs.get(i);
+			b.tick(worldState);
+			if(network.host && b.velocity.length() > 0.01) {
+				network.addEvent(Network.Event.EventType.BOMB_UPDATE, i, (int) (b.position.x), (int) (b.position.y), (int) (b.velocity.x), (int) (b.velocity.y));
+			}
 		}
 	}
 
@@ -234,9 +244,12 @@ public class MazeGame extends JPanel {
 		}
 
 		// Draw bombs
-		g.setColor(Color.orange);
-		for (Vector b : worldState.bombs) {
-			g.fillOval((int) (b.x - camera.x + S_WIDTH / 2 - 5), (int) (b.y - camera.y + S_HEIGHT / 2 - 5), 11, 11);
+		if (worldState.id != worldState.it) {
+			g.setColor(Color.orange);
+			for (Bomb b : worldState.bombs) {
+				g.fillOval((int) (b.position.x - camera.x + S_WIDTH / 2 - Bomb.RADIUS), (int) (b.position.y - camera.y + S_HEIGHT / 2 - Bomb.RADIUS), 2 * Bomb.RADIUS + 1,
+						2 * Bomb.RADIUS + 1);
+			}
 		}
 
 		// Draw the players

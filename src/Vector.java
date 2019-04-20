@@ -13,7 +13,7 @@ public class Vector implements java.io.Serializable {
 		this.y = y;
 	}
 
-	public void update(double x, double y) {
+	public void set(double x, double y) {
 		this.x = x;
 		this.y = y;
 	}

@@ -124,9 +124,11 @@ public class Network {
 		data = concatByteArray(data, intToByteArray(worldState.it));
 
 		data = concatByteArray(data, intToByteArray(worldState.bombs.size()));
-		for (Vector v : worldState.bombs) {
-			data = concatByteArray(data, intToByteArray((int) v.x));
-			data = concatByteArray(data, intToByteArray((int) v.y));
+		for (Bomb b : worldState.bombs) {
+			data = concatByteArray(data, intToByteArray((int) b.position.x));
+			data = concatByteArray(data, intToByteArray((int) b.position.y));
+			data = concatByteArray(data, intToByteArray((int) b.velocity.x));
+			data = concatByteArray(data, intToByteArray((int) b.velocity.y));
 		}
 
 		try {
@@ -175,8 +177,12 @@ public class Network {
 				int x = byteArrayToInt(data);
 				in.read(data);
 				int y = byteArrayToInt(data);
+				in.read(data);
+				int vx = byteArrayToInt(data);
+				in.read(data);
+				int vy = byteArrayToInt(data);
 
-				worldState.bombs.add(new Vector(x, y));
+				worldState.bombs.add(new Bomb(new Vector(x, y), new Vector(vx, vy)));
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -283,6 +289,7 @@ public class Network {
 			case TAG:
 			case NEW_BOMB:
 			case DESTROY_BOMB:
+			case BOMB_UPDATE:
 				System.out.println("Client sent server-reserved event. Code: " + byteArrayToInt(b));
 				break;
 			default:
@@ -384,16 +391,36 @@ public class Network {
 					x = byteArrayToInt(b);
 					in.read(b);
 					y = byteArrayToInt(b);
+					in.read(b);
+					int vx = byteArrayToInt(b);
+					in.read(b);
+					int vy = byteArrayToInt(b);
 
-					worldState.bombs.add(new Vector(x, y));
+					worldState.bombs.add(new Bomb(new Vector(x, y), new Vector(vx, vy)));
 
 					break;
 				case DESTROY_BOMB:
 					in.read(b);
-					i = byteArrayToInt(b);
+					int index = byteArrayToInt(b);
 
-					worldState.bombs.remove(i);
+					worldState.bombs.remove(index);
 
+					break;
+				case BOMB_UPDATE:
+					in.read(b);
+					index = byteArrayToInt(b);
+					in.read(b);
+					x = byteArrayToInt(b);
+					in.read(b);
+					y = byteArrayToInt(b);
+					in.read(b);
+					vx = byteArrayToInt(b);
+					in.read(b);
+					vy = byteArrayToInt(b);
+
+					worldState.bombs.get(index).position.set(x, y);
+					worldState.bombs.get(index).velocity.set(vx, vy);
+					
 					break;
 				default:
 					System.out.println("Unknown event received. Code: " + byteArrayToInt(b));
@@ -435,7 +462,7 @@ public class Network {
 		}
 
 		public static enum EventType {
-			UNKNOWN, PLAYER_X, PLAYER_Y, PLAYER_VEL_X, PLAYER_VEL_Y, NEW_PLAYER, TAG, NEW_BOMB, DESTROY_BOMB;
+			UNKNOWN, PLAYER_X, PLAYER_Y, PLAYER_VEL_X, PLAYER_VEL_Y, NEW_PLAYER, TAG, NEW_BOMB, DESTROY_BOMB, BOMB_UPDATE;
 
 			public int encode() {
 				switch (this) {
@@ -455,6 +482,8 @@ public class Network {
 					return 6;
 				case DESTROY_BOMB:
 					return 7;
+				case BOMB_UPDATE:
+					return 8;
 				case UNKNOWN:
 					return -1;
 				}
@@ -480,6 +509,8 @@ public class Network {
 					return NEW_BOMB;
 				case 7:
 					return DESTROY_BOMB;
+				case 8:
+					return BOMB_UPDATE;
 				case -1:
 					return UNKNOWN;
 				}
