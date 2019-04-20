@@ -4,11 +4,6 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
@@ -88,13 +83,16 @@ public class MazeGame extends JPanel {
 		frame.setVisible(true);
 	}
 
-	static final int MAZE_SIZE = 83, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 48, PLAYER_SIZE = 8, DASH_RANGE = (int) (TILE_SIZE * 1.5), DASH_COOLDOWN = 300, TAG_COOLDOWN = 60;
+	static final int MAZE_SIZE = 83, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 48, PLAYER_SIZE = 8, DASH_RANGE = (int) (TILE_SIZE * 1.85), DASH_COOLDOWN = 300, TAG_COOLDOWN = 60;
 	WorldState worldState;
+	Controls controls;
 	int tagCooldown;
 
 	public MazeGame(boolean host) {
 		tagCooldown = 0;
-		worldState = new WorldState();
+		worldState = new WorldState(null);
+		controls = new Controls(worldState);
+		worldState.controls = controls;
 		network = new Network(host, worldState);
 
 		// Colorize on initialization
@@ -131,59 +129,9 @@ public class MazeGame extends JPanel {
 				worldState.maze[x][y] = Tile.WALL;
 		generateMaze(worldState.maze, worldState.mazeSeed);
 
-		this.addKeyListener(new KeyAdapter() {
-			public void keyPressed(KeyEvent e) {
-				switch (e.getKeyCode()) {
-				case KeyEvent.VK_D:
-					worldState.controls.right = true;
-					break;
-				case KeyEvent.VK_S:
-					worldState.controls.down = true;
-					break;
-				case KeyEvent.VK_A:
-					worldState.controls.left = true;
-					break;
-				case KeyEvent.VK_W:
-					worldState.controls.up = true;
-					break;
-				}
-			}
-
-			public void keyReleased(KeyEvent e) {
-				switch (e.getKeyCode()) {
-				case KeyEvent.VK_D:
-					worldState.controls.right = false;
-					break;
-				case KeyEvent.VK_S:
-					worldState.controls.down = false;
-					break;
-				case KeyEvent.VK_A:
-					worldState.controls.left = false;
-					break;
-				case KeyEvent.VK_W:
-					worldState.controls.up = false;
-					break;
-				}
-			}
-		});
-		this.addMouseListener(new MouseAdapter() {
-			public void mousePressed(MouseEvent e) {
-				worldState.controls.mouseHeld = new Vector(e.getX(), e.getY());
-			}
-
-			public void mouseReleased(MouseEvent e) {
-				if (worldState.dashCooldown <= 0 && worldState.dashTarget != null) {
-					worldState.dashCooldown = (int) (DASH_COOLDOWN * (worldState.id == worldState.it ? 1.3 : 1));
-					worldState.players.get(worldState.id).position = worldState.dashTarget;
-				}
-				worldState.controls.mouseHeld = null;
-			}
-		});
-		this.addMouseMotionListener(new MouseMotionAdapter() {
-			public void mouseDragged(MouseEvent e) {
-				worldState.controls.mouseHeld.update(e.getX(), e.getY());
-			}
-		});
+		this.addKeyListener(worldState.controls);
+		this.addMouseListener(worldState.controls);
+		this.addMouseMotionListener(worldState.controls);
 		this.setFocusable(true);
 		this.requestFocus();
 
@@ -197,18 +145,17 @@ public class MazeGame extends JPanel {
 		if (m != null) {
 			m = m.clone();
 			m.update(m.x - S_WIDTH / 2, m.y - S_HEIGHT / 2);
-			m.setLength(DASH_RANGE);
+			if(m.length() > DASH_RANGE) {
+				m.setLength(DASH_RANGE);
+			}
+
+			while(!goodTeleportSpot(m.plus(worldState.players.get(worldState.id).position), worldState.maze) && m.length() > PLAYER_SIZE * 3) {
+				m.setLength(m.length()*0.975);
+			}
+
 			m.doDelta(worldState.players.get(worldState.id).position);
 
-			boolean goodSpot = true;
-			for (int x = (int) ((m.x - MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE); x < (m.x + MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE && goodSpot; x++)
-				for (int y = (int) ((m.y - MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE); y < (m.y + MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE && goodSpot; y++)
-					if (worldState.maze[x][y] == Tile.WALL)
-						goodSpot = false;
-			if (m.x < 0 || m.y < 0 || m.x > MazeGame.MAZE_SIZE * MazeGame.TILE_SIZE || m.y > MazeGame.MAZE_SIZE * MazeGame.TILE_SIZE)
-				goodSpot = false;
-
-			if (goodSpot) {
+			if (goodTeleportSpot(m, worldState.maze)) {
 				worldState.dashTarget = m;
 			}
 		}
@@ -302,6 +249,23 @@ public class MazeGame extends JPanel {
 			g.setColor(Color.blue);
 			g.drawRect(0, 0, S_WIDTH, S_HEIGHT);
 		}
+	}
+	
+	public static boolean goodTeleportSpot(Vector spot, Tile[][] maze) {
+		boolean goodSpot = true;
+		for (int x = (int) ((spot.x - MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE); x < (spot.x + MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE && goodSpot; x++) {
+			for (int y = (int) ((spot.y - MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE); y < (spot.y + MazeGame.PLAYER_SIZE) / MazeGame.TILE_SIZE && goodSpot; y++) {
+				if (x < 0 || y < 0 || x >= maze.length || y >= maze[x].length || maze[x][y] == Tile.WALL) {
+					goodSpot = false;
+				}
+			}
+		}
+
+		if (spot.x < 0 || spot.y < 0 || spot.x > MazeGame.MAZE_SIZE * MazeGame.TILE_SIZE || spot.y > MazeGame.MAZE_SIZE * MazeGame.TILE_SIZE) {
+			goodSpot = false;
+		}
+		
+		return goodSpot;
 	}
 
 	public static void generateMaze(Tile[][] maze, int mazeSeed) {

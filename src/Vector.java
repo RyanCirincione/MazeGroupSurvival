@@ -55,19 +55,29 @@ public class Vector implements java.io.Serializable {
 	public Vector plus(Vector v) {
 		return new Vector(x + v.x, y + v.y);
 	}
+	
+	public Vector minus(Vector v) {
+		return new Vector(x - v.x, y - v.y);
+	}
 
 	public Vector toPositive() {
 		return new Vector(Math.abs(x), Math.abs(y));
 	}
 	
-	public void setLength(double l) {
+	public Vector setLength(double l) {
 		double len = this.length();
 		x = x * l / len;
 		y = y * l / len;
+		
+		return this;
 	}
 
 	public double length() {
 		return Math.sqrt(x * x + y * y);
+	}
+	
+	public Vector lerp(Vector v, double distance) {
+		return this.plus(v.minus(this).setLength(distance));
 	}
 
 	public boolean equals(Vector pair) {
