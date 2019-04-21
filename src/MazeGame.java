@@ -241,7 +241,6 @@ public class MazeGame extends JPanel {
 				
 				for(Vector v : it.killZones) {
 					if(b.position.minus(v).length() < Bomb.RADIUS + Player.KILL_ZONE_RADIUS) {
-						System.out.println(worldState);
 						network.addEvent(Network.Event.EventType.DESTROY_BOMB, i, worldState.it);
 
 						it.health--;

@@ -440,7 +440,6 @@ public class Network {
 					int index = byteArrayToInt(b);
 					in.read(b);
 					int p = byteArrayToInt(b);
-					System.out.println(p);
 
 					worldState.bombs.remove(index);
 					worldState.players.get(p).health--;
