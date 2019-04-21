@@ -1,24 +1,31 @@
 import java.awt.Color;
+import java.util.ArrayList;
 
 public class Player {
-	public static final int SPEED = 4, MAX_HEALTH = 10;
+	public static final int SPEED = 4, MAX_HEALTH = 15, KILL_ZONE_RADIUS = 150, NUM_KILL_ZONES = 4;
+	public ArrayList<Vector> killZones;
 	public Vector position, velocity;
 	public Color color;
 	public int health;
 
 	public Player(Color c) {
-		this(new Vector(MazeGame.TILE_SIZE * 1.5, MazeGame.TILE_SIZE * 1.5), c, MAX_HEALTH);
+		this(c, new ArrayList<Vector>());
 	}
 
-	public Player(Vector pos, Color c, int h) {
-		this(pos, new Vector(0, 0), c, h);
+	public Player(Color c, ArrayList<Vector> k) {
+		this(new Vector(MazeGame.TILE_SIZE * 1.5, MazeGame.TILE_SIZE * 1.5), c, MAX_HEALTH, k);
 	}
 
-	public Player(Vector pos, Vector vel, Color c, int h) {
+	public Player(Vector pos, Color c, int h, ArrayList<Vector> k) {
+		this(pos, new Vector(0, 0), c, h, k);
+	}
+
+	public Player(Vector pos, Vector vel, Color c, int h, ArrayList<Vector> k) {
 		position = pos.clone();
 		velocity = vel.clone();
 		color = c;
 		health = h;
+		killZones = k;
 	}
 
 	public void movement(WorldState worldState) {

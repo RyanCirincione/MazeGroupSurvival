@@ -27,4 +27,9 @@ public class WorldState {
 		this.it = it;
 		this.bombs = bombs;
 	}
+
+	public String toString() {
+		return "WorldState [" + color + ", " + controls + ", " + players + ", " + maze + ", " + id + ", " + mazeSeed + ", " + dashCooldown + ", " + dashTarget + ", " + it + ", "
+				+ bombs + "]";
+	}
 }

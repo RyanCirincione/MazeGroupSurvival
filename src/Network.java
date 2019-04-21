@@ -120,6 +120,9 @@ public class Network {
 			data = concatByteArray(data, intToByteArray((int) p.position.x));
 			data = concatByteArray(data, intToByteArray((int) p.position.y));
 			data = concatByteArray(data, intToByteArray(p.color.getRed()), intToByteArray(p.color.getGreen()), intToByteArray(p.color.getBlue()), intToByteArray(p.health));
+			for (int j = 0; j < p.killZones.size(); j++) {
+				data = concatByteArray(data, intToByteArray((int) p.killZones.get(j).x), intToByteArray((int) p.killZones.get(j).y));
+			}
 		}
 		data = concatByteArray(data, intToByteArray(worldState.it));
 
@@ -164,7 +167,17 @@ public class Network {
 				in.read(data);
 				int health = byteArrayToInt(data);
 
-				worldState.players.put(id, new Player(new Vector(x, y), new Color(r, g, b), health));
+				ArrayList<Vector> killZones = new ArrayList<Vector>();
+				for (int j = 0; j < Player.NUM_KILL_ZONES; j++) {
+					in.read(data);
+					x = byteArrayToInt(data);
+					in.read(data);
+					y = byteArrayToInt(data);
+
+					killZones.add(new Vector(x, y));
+				}
+
+				worldState.players.put(id, new Player(new Vector(x, y), new Color(r, g, b), health, killZones));
 			}
 
 			in.read(data);
@@ -284,8 +297,19 @@ public class Network {
 				in.read(b);
 				int bl = byteArrayToInt(b);
 
-				worldState.players.put(id, new Player(new Color(r, g, bl)));
-				this.addEvent(Event.EventType.NEW_PLAYER, id, r, g, bl);
+				ArrayList<Vector> killZones = new ArrayList<Vector>();
+				for (int j = 0; j < Player.NUM_KILL_ZONES; j++) {
+					in.read(b);
+					x = byteArrayToInt(b);
+					in.read(b);
+					y = byteArrayToInt(b);
+
+					killZones.add(new Vector(x, y));
+				}
+
+				worldState.players.put(id, new Player(new Color(r, g, bl), killZones));
+				this.addEvent(Event.EventType.NEW_PLAYER, id, r, g, bl, (int) (killZones.get(0).x), (int) (killZones.get(0).y), (int) (killZones.get(1).x),
+						(int) (killZones.get(1).y), (int) (killZones.get(2).x), (int) (killZones.get(2).y), (int) (killZones.get(3).x), (int) (killZones.get(3).y));
 
 				break;
 			case TAG:
@@ -379,7 +403,17 @@ public class Network {
 					in.read(b);
 					int bl = byteArrayToInt(b);
 
-					worldState.players.put(id, new Player(new Color(r, g, bl)));
+					ArrayList<Vector> killZones = new ArrayList<Vector>();
+					for (int j = 0; j < Player.NUM_KILL_ZONES; j++) {
+						in.read(b);
+						x = byteArrayToInt(b);
+						in.read(b);
+						y = byteArrayToInt(b);
+
+						killZones.add(new Vector(x, y));
+					}
+
+					worldState.players.put(id, new Player(new Color(r, g, bl), killZones));
 
 					break;
 				case TAG:
@@ -404,8 +438,12 @@ public class Network {
 				case DESTROY_BOMB:
 					in.read(b);
 					int index = byteArrayToInt(b);
+					in.read(b);
+					int p = byteArrayToInt(b);
+					System.out.println(p);
 
 					worldState.bombs.remove(index);
+					worldState.players.get(p).health--;
 
 					break;
 				case BOMB_UPDATE:
@@ -461,6 +499,10 @@ public class Network {
 		public Event(EventType t, byte[] d) {
 			type = t;
 			data = d;
+		}
+
+		public String toString() {
+			return "E{" + type.encode() + "," + data + "}";
 		}
 
 		public static enum EventType {

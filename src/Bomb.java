@@ -24,22 +24,24 @@ public class Bomb {
 			}
 		}
 
-		if (position.x < 0) {
+		if (position.x <= 0) {
 			velocity.x = 6;
 		}
-		if (position.y < 0) {
+		if (position.y <= 0) {
 			velocity.y = 6;
 		}
-		if (position.x > worldState.maze.length * MazeGame.TILE_SIZE) {
+		if (position.x >= worldState.maze.length * MazeGame.TILE_SIZE) {
 			velocity.x = -6;
 		}
-		if (position.y > worldState.maze[0].length * MazeGame.TILE_SIZE) {
+		if (position.y >= worldState.maze[0].length * MazeGame.TILE_SIZE) {
 			velocity.y = -6;
 		}
 
 		position.doDelta(velocity);
 
-		if (worldState.maze[(int) (position.x / MazeGame.TILE_SIZE)][(int) (position.y / MazeGame.TILE_SIZE)] != Tile.WALL) {
+		if (position.x >= 0 && position.y >= 0 && (int) (position.x / MazeGame.TILE_SIZE) < worldState.maze.length
+				&& (int) (position.y / MazeGame.TILE_SIZE) < worldState.maze[0].length
+				&& worldState.maze[(int) (position.x / MazeGame.TILE_SIZE)][(int) (position.y / MazeGame.TILE_SIZE)] != Tile.WALL) {
 			if (velocity.length() > 0.1) {
 				velocity.setLength(velocity.length() * 0.935);
 			} else {

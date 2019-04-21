@@ -83,7 +83,8 @@ public class MazeGame extends JPanel {
 		frame.setVisible(true);
 	}
 
-	static final int MAZE_SIZE = 83, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 48, PLAYER_SIZE = 8, DASH_RANGE = (int) (TILE_SIZE * 1.85), DASH_COOLDOWN = 300, TAG_COOLDOWN = 60;
+	static final int MAZE_SIZE = 83, S_WIDTH = 800, S_HEIGHT = 600, TILE_SIZE = 48, PLAYER_SIZE = 8, DASH_RANGE = (int) (TILE_SIZE * 1.85), DASH_COOLDOWN = 300,
+			TAG_COOLDOWN = 60;
 	WorldState worldState;
 	Controls controls;
 	int tagCooldown;
@@ -113,12 +114,27 @@ public class MazeGame extends JPanel {
 			worldState.id = 0;
 			worldState.players.put(worldState.id, new Player(new Color(worldState.color[0], worldState.color[1], worldState.color[2])));
 
+			// Create player's kill zones
+			for (int i = 0; i < Player.NUM_KILL_ZONES; i++) {
+				worldState.players.get(worldState.id).killZones.add(new Vector(Math.random() * MAZE_SIZE * TILE_SIZE, Math.random() * MAZE_SIZE * TILE_SIZE));
+			}
+
 			System.out.println("--- Host ---");
 		} else {
 			worldState.id = worldState.players.size();
 			worldState.players.put(worldState.id, new Player(new Color(worldState.color[0], worldState.color[1], worldState.color[2])));
 
-			network.addEvent(Network.Event.EventType.NEW_PLAYER, worldState.id, worldState.color[0], worldState.color[1], worldState.color[2]);
+			// Create player's kill zones
+			int[] data = new int[Player.NUM_KILL_ZONES * 2];
+			for (int i = 0; i < Player.NUM_KILL_ZONES; i++) {
+				Vector v = new Vector(Math.random() * MAZE_SIZE * TILE_SIZE, Math.random() * MAZE_SIZE * TILE_SIZE);
+				worldState.players.get(worldState.id).killZones.add(v);
+				data[i] = (int) v.x;
+				data[i + 1] = (int) v.y;
+			}
+
+			network.addEvent(Network.Event.EventType.NEW_PLAYER, worldState.id, worldState.color[0], worldState.color[1], worldState.color[2], data[0], data[1], data[2], data[3],
+					data[4], data[5], data[6], data[7]);
 
 			System.out.println("--- Client: " + worldState.id + " ---");
 		}
@@ -216,6 +232,25 @@ public class MazeGame extends JPanel {
 				network.addEvent(Network.Event.EventType.BOMB_UPDATE, i, (int) (b.position.x), (int) (b.position.y), (int) (b.velocity.x), (int) (b.velocity.y));
 			}
 		}
+		
+		// Destroy bombs
+		if (network.host) {
+			for(int i = 0; i < worldState.bombs.size(); i++) {
+				Bomb b = worldState.bombs.get(i);
+				Player it = worldState.players.get(worldState.it);
+				
+				for(Vector v : it.killZones) {
+					if(b.position.minus(v).length() < Bomb.RADIUS + Player.KILL_ZONE_RADIUS) {
+						System.out.println(worldState);
+						network.addEvent(Network.Event.EventType.DESTROY_BOMB, i, worldState.it);
+
+						it.health--;
+						worldState.bombs.remove(i--);
+						break;
+					}
+				}
+			}
+		}
 	}
 
 	public void paintComponent(Graphics gr) {
@@ -277,6 +312,16 @@ public class MazeGame extends JPanel {
 		g.setStroke(new BasicStroke(3));
 		g.drawArc(S_WIDTH / 2 - PLAYER_SIZE, S_HEIGHT / 2 - PLAYER_SIZE, PLAYER_SIZE * 2, PLAYER_SIZE * 2, 90,
 				(int) (360 * worldState.dashCooldown / (DASH_COOLDOWN * (worldState.id == worldState.it ? 1.3 : 1))));
+
+		// Draw player killzone
+		if (worldState.id != worldState.it) {
+			Player player = worldState.players.get(worldState.it);
+			g.setColor(new Color(player.color.getRGB() & 0x80ffffff, true));
+			for (Vector v : player.killZones) {
+				g.fillOval((int) (v.x - Player.KILL_ZONE_RADIUS - camera.x + S_WIDTH / 2), (int) (v.y - Player.KILL_ZONE_RADIUS - camera.y + S_HEIGHT / 2),
+						Player.KILL_ZONE_RADIUS * 2, Player.KILL_ZONE_RADIUS * 2);
+			}
+		}
 
 		// Draw box for person whose it vision
 		if (worldState.id == worldState.it) {
