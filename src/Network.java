@@ -420,6 +420,10 @@ public class Network {
 					in.read(b);
 					id = byteArrayToInt(b);
 
+					if (worldState.it == worldState.id) {
+						worldState.players.get(worldState.id).position.set(Math.random() * MazeGame.MAZE_SIZE * MazeGame.TILE_SIZE,
+								Math.random() * MazeGame.MAZE_SIZE * MazeGame.TILE_SIZE);
+					}
 					worldState.it = id;
 					break;
 				case NEW_BOMB:
